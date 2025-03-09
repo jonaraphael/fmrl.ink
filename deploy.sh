@@ -37,6 +37,7 @@ gcloud functions deploy unsubscribe-link \
 # (Optional) Configure Cloud Scheduler to hit the cleanup endpoint daily.
 # Example: run cleanup every day at midnight.
 gcloud scheduler jobs create http fmrlink-cleanup-job \
+  --location=us-central1 \
   --schedule="0 0 * * *" \
   --http-method=POST \
   --uri="$(gcloud functions describe cleanup --format='value(url)')" \
