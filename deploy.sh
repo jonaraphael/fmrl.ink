@@ -39,7 +39,7 @@ gcloud functions deploy unsubscribe-link \
 gcloud scheduler jobs create http fmrlink-cleanup-job \
   --schedule="0 0 * * *" \
   --http-method=POST \
-  --uri="$(gcloud functions describe cleanup --format='value(httpsTrigger.url)')" \
+  --uri="$(gcloud functions describe cleanup --format='value(url)')" \
   --time-zone="UTC" \
   --attempt-deadline=60s --quiet
 
