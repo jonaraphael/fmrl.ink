@@ -1,6 +1,15 @@
 #!/bin/bash
 set -e
 
+# List active accounts; if none, exit with error.
+ACTIVE_ACCOUNT=$(gcloud auth list --filter=status:ACTIVE --format="value(account)")
+if [ -z "$ACTIVE_ACCOUNT" ]; then
+  echo "No active account found. Exiting."
+  exit 1
+else
+  echo "Active account: $ACTIVE_ACCOUNT"
+fi
+
 # Deploy inbound email function
 gcloud functions deploy inbound-email \
   --entry-point inbound_email \
