@@ -8,7 +8,7 @@ fmrl.ink provides ephemeral, anonymous, and secure mailing lists, ideal for shor
   Send an email with the subject line `3 days` (or any number of days) to:
 
   ```
-  anykeyword@quickli.st
+  anykeyword@fmrl.ink
   ```
 
   This subscribes your email anonymously for the specified number of days.
