@@ -1,8 +1,6 @@
-import json
 import logging
 import os
 import re
-from datetime import datetime, timedelta
 
 from flask import Flask, jsonify, request
 
@@ -34,7 +32,7 @@ def inbound_email():
         to_addr = email_data.get("to")  # e.g., "anykeyword@fmrl.ink"
         cc_list = email_data.get("cc", [])
         subject = email_data.get("subject", "").strip().lower()
-        body = email_data.get("body", "")
+        # body = email_data.get("body", "")
         list_keyword = to_addr.split("@")[0]
 
         logging.info(
@@ -129,7 +127,7 @@ def unsubscribe_link():
         email, list_keyword = verify_unsubscribe_token(token)
         unsubscribe_user(list_keyword, email)
         return f"Successfully unsubscribed {email} from {list_keyword}.", 200
-    except Exception as e:
+    except Exception:
         logging.exception("Error processing unsubscribe link.")
         return "Unsubscribe failed.", 500
 
