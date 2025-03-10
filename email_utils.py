@@ -1,29 +1,21 @@
-import base64
 import logging
-import os
-from datetime import datetime
+from secrets import get_secret
 
-import requests  # New dependency for Mailgun API
+import requests
 from cryptography.fernet import Fernet
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
-# Configure secrets (make sure these are set as environment variables)
-TOKEN_SECRET = os.environ.get("TOKEN_SECRET", "default-token-secret")
-ENCRYPTION_KEY = os.environ.get(
-    "ENCRYPTION_KEY"
-)  # Must be a 32-byte URL-safe base64-encoded key
+# Retrieve sensitive configuration from Secret Manager
+TOKEN_SECRET = get_secret("TOKEN_SECRET")
+ENCRYPTION_KEY = get_secret("ENCRYPTION_KEY")
+MAILGUN_API_KEY = get_secret("MAILGUN_API_KEY")
+MAILGUN_DOMAIN = get_secret("MAILGUN_DOMAIN")
+BASE_URL = get_secret(
+    "BASE_URL"
+)  # Your service’s public URL (e.g., "https://fmrl.ink")
 
-# Mailgun configuration from environment
-MAILGUN_API_KEY = os.environ.get("MAILGUN_API_KEY")
-MAILGUN_DOMAIN = os.environ.get("MAILGUN_DOMAIN")
-
-if not ENCRYPTION_KEY:
-    raise Exception("ENCRYPTION_KEY environment variable not set")
-
-# Initialize the token serializer
+# Initialize the token serializer and Fernet encryption
 serializer = URLSafeTimedSerializer(TOKEN_SECRET)
-
-# Initialize Fernet encryption
 fernet = Fernet(ENCRYPTION_KEY)
 
 
@@ -60,8 +52,7 @@ def generate_unsubscribe_link(email, list_keyword):
     Generate a secure unsubscribe link with a signed token.
     """
     token = serializer.dumps({"email": email, "list": list_keyword})
-    base_url = os.environ.get("BASE_URL", "https://fmrl.ink")
-    unsubscribe_url = f"{base_url}/unsubscribe?token={token}"
+    unsubscribe_url = f"{BASE_URL}/unsubscribe?token={token}"
     return unsubscribe_url
 
 
@@ -97,8 +88,6 @@ def send_help_email(email):
 def anonymize_email_content(email_data):
     """
     Remove any personally identifiable information from the email before relaying.
-    This might include stripping headers or sender information.
+    For simplicity, only include the body.
     """
-    # For simplicity, only include the body. A production version might
-    # do more sophisticated processing.
     return email_data.get("body", "")

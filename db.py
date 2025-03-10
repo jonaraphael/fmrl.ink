@@ -1,19 +1,15 @@
-import os
+import hashlib
 import logging
 from datetime import datetime, timedelta
-import hashlib
+from secrets import get_secret
 
-from google.cloud import firestore
 from cryptography.fernet import Fernet
+from google.cloud import firestore
 
-# Initialize Firestore client
-db_client = firestore.Client()
-
-# Initialize Fernet encryption (reuse ENCRYPTION_KEY from environment)
-ENCRYPTION_KEY = os.environ.get("ENCRYPTION_KEY")
-if not ENCRYPTION_KEY:
-    raise Exception("ENCRYPTION_KEY environment variable not set")
+# Retrieve ENCRYPTION_KEY from Secret Manager
+ENCRYPTION_KEY = get_secret("ENCRYPTION_KEY")
 fernet = Fernet(ENCRYPTION_KEY)
+db_client = firestore.Client()
 
 
 def _hash_email(email):
@@ -34,15 +30,11 @@ def decrypt_email(encrypted_email):
 def subscribe_user(list_keyword, email, duration_days):
     """
     Subscribe a user to a mailing list.
-    If the list doesn't exist, create it.
-    Each subscriber is stored with an expiration timestamp.
     """
     list_ref = db_client.collection("lists").document(list_keyword)
     list_doc = list_ref.get()
     if not list_doc.exists:
-        list_ref.set({
-            "created_at": datetime.utcnow(),
-        })
+        list_ref.set({"created_at": datetime.utcnow()})
         logging.info(f"Created new list: {list_keyword}")
 
     expiration = datetime.utcnow() + timedelta(days=duration_days)
@@ -78,7 +70,9 @@ def extend_subscription(list_keyword, email, extension_days):
         current_exp = sub_doc.get("expires_at")
         new_exp = current_exp + timedelta(days=extension_days)
         sub_ref.update({"expires_at": new_exp})
-        logging.info(f"Extended subscription for {email} to {new_exp} in list {list_keyword}.")
+        logging.info(
+            f"Extended subscription for {email} to {new_exp} in list {list_keyword}."
+        )
     else:
         logging.warning(f"Subscription for {email} in list {list_keyword} not found.")
 
@@ -86,7 +80,6 @@ def extend_subscription(list_keyword, email, extension_days):
 def get_subscribers(list_keyword):
     """
     Return a list of subscribers for the given mailing list.
-    Each subscriber record includes the decrypted email.
     """
     list_ref = db_client.collection("lists").document(list_keyword)
     subs = list_ref.collection("subscribers").stream()
@@ -104,8 +97,7 @@ def get_subscribers(list_keyword):
 
 def cleanup_expired():
     """
-    Scan all mailing lists and remove subscribers whose expiration has passed.
-    Delete lists if they have no remaining subscribers.
+    Remove expired subscriptions and delete empty lists.
     """
     lists = db_client.collection("lists").stream()
     now = datetime.utcnow()
@@ -117,9 +109,11 @@ def cleanup_expired():
             data = sub.to_dict()
             if data["expires_at"] < now:
                 sub.reference.delete()
-                logging.info(f"Deleted expired subscription {sub.id} in list {list_keyword}.")
-        # Check if list is empty
-        remaining = list_ref.collection("subscribers").limit(1).stream()
-        if not any(remaining):
+                logging.info(
+                    f"Deleted expired subscription {sub.id} in list {list_keyword}."
+                )
+        if not any(list_ref.collection("subscribers").limit(1).stream()):
             list_ref.delete()
-            logging.info(f"Deleted list {list_keyword} as it has no active subscribers.")
+            logging.info(
+                f"Deleted list {list_keyword} as it has no active subscribers."
+            )
