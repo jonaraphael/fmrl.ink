@@ -13,6 +13,9 @@ echo "Deleting Cloud Scheduler job..."
 gcloud scheduler jobs delete fmrlink-cleanup-job --quiet --location=$REGION
 
 echo "Deleting Firestore data (collection 'lists')..."
+# Install the required Python package for Firestore deletion
+pip install google-cloud-firestore
+
 python delete_firestore_data.py
 
 echo "Teardown complete."
