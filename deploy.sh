@@ -2,9 +2,9 @@
 set -e
 
 # Define variables
-PROJECT_ID="fmrl-453205"
+PROJECT_ID="fmrlink"
 REGION="us-central1"
-SERVICE_ACCOUNT="fmrl-sa@fmrl-453205.iam.gserviceaccount.com"
+SERVICE_ACCOUNT="fmrl-sa@fmrlink.iam.gserviceaccount.com"
 
 # Deploy inbound email function with custom service account
 gcloud functions deploy inbound-email \
