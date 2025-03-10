@@ -1,10 +1,11 @@
 import hashlib
 import logging
 from datetime import datetime, timedelta
-from secrets import get_secret
 
 from cryptography.fernet import Fernet
 from google.cloud import firestore
+
+from gcp_secrets import get_secret
 
 # Retrieve ENCRYPTION_KEY from Secret Manager
 ENCRYPTION_KEY = get_secret("ENCRYPTION_KEY")

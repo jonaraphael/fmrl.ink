@@ -1,9 +1,10 @@
 import logging
-from secrets import get_secret
 
 import requests
 from cryptography.fernet import Fernet
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+
+from gcp_secrets import get_secret
 
 # Retrieve sensitive configuration from Secret Manager
 TOKEN_SECRET = get_secret("TOKEN_SECRET")
