@@ -1,4 +1,7 @@
+import hashlib
+import hmac
 import logging
+import time
 
 import requests
 from cryptography.fernet import Fernet
@@ -92,3 +95,38 @@ def anonymize_email_content(email_data):
     For simplicity, only include the body.
     """
     return email_data.get("body", "")
+
+
+def verify_mailgun_signature(data):
+    """
+    Verify the Mailgun webhook signature to ensure the request is genuine.
+    Expects 'timestamp', 'token', and 'signature' in the data.
+    """
+    if not all(k in data for k in ("timestamp", "token", "signature")):
+        raise Exception("Missing Mailgun signature fields.")
+
+    timestamp = data["timestamp"]
+    token = data["token"]
+    signature = data["signature"]
+
+    # Check that the timestamp is recent (within 15 minutes)
+    current_time = int(time.time())
+    try:
+        timestamp_int = int(timestamp)
+    except ValueError:
+        raise Exception("Invalid timestamp format.")
+
+    if abs(current_time - timestamp_int) > 15 * 60:
+        raise Exception("Mailgun signature timestamp is too old.")
+
+    # Compute HMAC using Mailgun API key
+    hmac_digest = hmac.new(
+        key=MAILGUN_API_KEY.encode("utf-8"),
+        msg=f"{timestamp}{token}".encode("utf-8"),
+        digestmod=hashlib.sha256,
+    ).hexdigest()
+
+    if not hmac.compare_digest(hmac_digest, signature):
+        raise Exception("Invalid Mailgun signature.")
+
+    return True

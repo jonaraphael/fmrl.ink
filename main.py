@@ -27,12 +27,25 @@ EXTEND_REGEX = re.compile(r"^extend\s+(\d+)\s*days$", re.IGNORECASE)
 @app.route("/inbound", methods=["POST"])
 def inbound_email():
     try:
-        email_data = request.get_json(force=True)
+        # Accept JSON or form data from Mailgun webhook
+        if request.is_json:
+            email_data = request.get_json()
+        else:
+            email_data = request.form.to_dict()
+
+        # Verify Mailgun webhook signature
+        from email_utils import verify_mailgun_signature
+
+        try:
+            verify_mailgun_signature(email_data)
+        except Exception as sig_error:
+            logging.error(f"Mailgun signature verification failed: {sig_error}")
+            return jsonify({"error": "Invalid signature"}), 403
+
         sender = email_data.get("sender")
         to_addr = email_data.get("to")  # e.g., "anykeyword@fmrl.ink"
         cc_list = email_data.get("cc", [])
         subject = email_data.get("subject", "").strip().lower()
-        # body = email_data.get("body", "")
         list_keyword = to_addr.split("@")[0]
 
         logging.info(
@@ -44,6 +57,9 @@ def inbound_email():
             duration = int(subscribe_match.group(1))
             subscribe_user(list_keyword, sender, duration)
             if cc_list:
+                # cc_list might be a comma-separated string if coming from form data
+                if isinstance(cc_list, str):
+                    cc_list = [addr.strip() for addr in cc_list.split(",")]
                 for cc in cc_list:
                     subscribe_user(list_keyword, cc, duration)
             confirmation_msg = (
@@ -107,6 +123,12 @@ def inbound_email():
 @app.route("/cleanup", methods=["POST"])
 def cleanup():
     from db import cleanup_expired
+
+    # Protect the cleanup endpoint with a secret token
+    CLEANUP_TOKEN = os.environ.get("CLEANUP_TOKEN")
+    provided_token = request.args.get("token")
+    if not CLEANUP_TOKEN or provided_token != CLEANUP_TOKEN:
+        return jsonify({"error": "Unauthorized"}), 403
 
     try:
         cleanup_expired()
